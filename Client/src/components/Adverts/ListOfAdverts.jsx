@@ -6,77 +6,47 @@ import ListGroup from "react-bootstrap/ListGroup";
 import { withRouter } from "react-router-dom";
 import { UserContext } from "../Context/UserContext";
 
-// Api handler
-import api from "../../utils/Api";
-
 class ListOfAdverts extends React.Component {
-  constructor(props) {
-    super(props);
+  static contextType = UserContext;
 
-    this.state = {
-      query: "",
-      data: {
-        count: 0,
-        results: []
-      }
+  componentDidMount() {
+    const state = {
+      ...this.context,
+      data: this.props.data
     };
-  } // end of constructor}
-
-  async componentDidMount() {
-    const query = this.props.query;
-    console.log("componentDidMount ListAdverts STATE", this.state);
-    console.log("componentDidMount ListAdverts context", this.context);
-    console.log("componentDidMount ListAdverts QUERY", query);
-    const count = 0;
-    const results = [];
-    // await this.loadItems(query);
-    // const count = results.length;
-    const data = { count, results };
-    console.log("componentDidMount ListAdverts DATA", data);
-    this.setState({ query, data });
+    this.updateState(state);
   }
 
-  static async getDerivedStateFrom(nextProps, prevState) {
-    console.log("getDeriv ListOfAdverts PREVSTATE", prevState);
-    console.log("getDeriv ListOfAdverts NEXTPROPS", nextProps);
+  static getDerivedStateFrom(nextProps, prevState) {
+    let data = this.context.data;
     if (prevState.query !== nextProps.query) {
-      const query = this.prevState.query;
-      const { count, results } = await this.loadItems(query);
-      const data = { count, results };
-
-      this.setState({ query, data });
+      data = this.nextProps.data;
     }
+    const state = {
+      ...this.context,
+      data
+    };
+    this.updateState(state);
   }
 
-  loadItems = async query => {
+  updateState = state => {
     try {
-      const value = await api.getItems(query);
-      console.log("loadItems ListOfAdverts VALUE", value);
-      const { count, results } = value;
-      // const count = results.length;
-      const data = {
-        count,
-        results
-      };
-      this.setState({ query, data }, () => {
-        console.log("setState loadItems ListOfAdverts VALUE", value);
-        return data;
-      });
+      this.setState(state);
     } catch (error) {
-      console.log("ERROR loading results", error);
+      console.log("Error updating the context");
     }
   };
 
   render() {
-    console.log("render ListOfAdverts state", this.state);
-    if (!this.state.data.count >= 0) {
+    if (!this.props) {
       return null;
     }
     const { count, results } = this.props.data;
-    console.log("render ListOfAdverts context", this.context);
     return (
       <>
-        <p className="text-center mt-2">Results ({count || 0} adverts)</p>
+        <p className="text-center mt-2">
+          Results :({count} {count === 1 ? "advert" : "adverts"})
+        </p>
         <hr />
         <ListGroup>
           {results.map((advert, index) => {
@@ -96,7 +66,11 @@ class ListOfAdverts extends React.Component {
                       return (
                         <Badge
                           pill
-                          variant="primary"
+                          variant={
+                            optionTagName !== this.context.selectedTag
+                              ? "primary"
+                              : "warning"
+                          }
                           className="mr-1"
                           key={index}
                         >
@@ -122,5 +96,4 @@ class ListOfAdverts extends React.Component {
   }
 }
 
-ListOfAdverts.contextType = UserContext;
 export default withRouter(ListOfAdverts);
