@@ -1,12 +1,10 @@
 import React from "react";
 import { withRouter } from "react-router-dom";
-
 import Storage from "../../utils/Storage";
 
 // import Spinner from 'react-bootstrap/Spinner';
 
-// Context and user profile
-import { UserContext, UserProfile } from "../Context/UserContext";
+import { UserContext } from "../Context/UserContext";
 
 import AppNavbar from "../AppNavbar/AppNavbar";
 
@@ -32,11 +30,28 @@ const toastConf = {
 toast.configure(toastConf);
 
 class Register extends React.Component {
-  static contextType = UserContext;
-
   componentDidMount() {
+    // Take the tags from api
     try {
-      this.initData();
+      this.loadTagsFromApi();
+
+      // Check if there are a user saved in localStorage
+      const userExist = Storage.isKey("user");
+      let user = this.context.user;
+      if (userExist) {
+        user = Storage.load("user");
+        toast.success("User loaded!!");
+      }
+      const state = {
+        ...this.context,
+        user: {
+          ...user,
+          isConnected: false
+        },
+        userExist: userExist
+      };
+      console.log("Saving Register state", state);
+      this.setState(state);
     } catch (error) {
       const msg = "Error getting tags from api";
       console.info(msg, error);
@@ -44,103 +59,65 @@ class Register extends React.Component {
     }
   }
 
-  // reset Tags... & data's form
-  initData = async () => {
-    // load tags from API
-    const enableTags = await this.loadTagsFromApi();
-    const userExist = Storage.isKey("user");
-    let user = this.context.user;
-
-    // Check if there are a user saved in localStorage
-    if (userExist) {
-      user = Storage.load("user");
-      toast.success("User loaded!!");
-    }
-    const state = {
-      ...this.context,
-      user: {
-        ...user,
-        isConnected: false
-      },
-      enableTags,
-      selectedTag: user.tag,
-      userExist
-    };
-    this.updateState(state);
-    this.updateLocalStorage(state);
-  };
-
-  // Load enable tags from api
-  loadTagsFromApi = async () => {
-    try {
-      // const state = this.context;
-      this.API_TAGS = [];
-      const loadingToast = toast.info("Loading tags...");
-      this.API_TAGS = await api.getTags();
-      console.log("Tags readed from api:", this.API_TAGS);
-      toast.dismiss(loadingToast);
-      return this.API_TAGS;
-    } catch (error) {
-      console.info("Error loading tags", error);
-      return [];
-    }
-  }; // end LoadTagsFromApi
-
-  updateState = state => {
-    try {
-      this.setState(state, async () => {
-        await this.context.updateContext(state);
+  loadTagsFromApi = () => {
+    let isBusy = true;
+    this.setState(this.context, () => {
+      this.setState({ isBusy }, async () => {
+        const loadingToast = toast.info("Loading...");
+        this.API_TAGS = await api.getTags();
+        console.log("Tags readed from api:", this.API_TAGS);
+        this.setState({
+          ...this.state,
+          enableTags: this.API_TAGS
+        });
+        isBusy = false;
+        this.setState({ isBusy }, () => {
+          toast.dismiss(loadingToast);
+        });
       });
-    } catch (error) {
-      console.log("Error updating the context");
-    }
+    });
   };
 
-  updateLocalStorage = state => {
-    console.log("Updated user context", this.context);
-    // Save user's data in localStorage
-    if (this.state.user.isPermanent) {
-      const { name, surname } = Storage.save(state.user, "user");
-      if (state.user.isConnected) {
-        toast.success(`User: ${name} ${surname} saved in local storage!!!`);
-      }
-    }
+  initTags = () => {
+    const state = this.context;
+    this.loadTagsFromApi();
+    this.setState(state);
   };
 
   onInputChange = event => {
     const { name, value } = event.target;
-    const state = {
+    this.setState({
       ...this.state,
       user: {
         ...this.state.user,
         [name]: value
       }
-    };
-    this.updateState(state);
+    });
   };
 
   onTagChange = event => {
-    const selectedTag = event.target.value;
-    const state = {
+    let value = Array.from(
+      event.target.selectedOptions,
+      option => option.value
+    );
+    this.setState({
       ...this.state,
+      selectedTag: value,
       user: {
         ...this.state.user,
-        tag: selectedTag
-      },
-      selectedTag
-    };
-    this.updateState(state);
+        tag: value
+      }
+    });
   };
 
   onPermanentChange = () => {
-    const state = {
+    this.setState({
       ...this.state,
       user: {
         ...this.state.user,
         isPermanent: !this.state.user.isPermanent
       }
-    };
-    this.updateState(state);
+    });
   };
 
   onConfirmForm = event => {
@@ -154,25 +131,36 @@ class Register extends React.Component {
       return false;
     }
     // Validated!!
+    const selectedTag = document.getElementById("tagInput").selected;
     const state = {
       ...this.state,
+      enableTags: this.API_TAGS,
+      selectedTag,
       user: {
         ...this.state.user,
         isConnected: true
       }
     };
-    this.updateState(state);
-    this.updateLocalStorage(state);
+    this.setState(state);
+    this.context.updateContext(state);
 
+    // Save user's data in localStorage
+    if (this.state.user.isPermanent) {
+      const saved = Storage.save(state.user, "user");
+      toast.success(
+        `User: ${saved.name} ${saved.surname} saved in local storage!!!`
+      );
+    }
     this.props.history.push("/adverts");
   };
 
   onClearForm = event => {
     event.preventDefault();
-    const user = UserProfile;
-    this.context.user = user;
-    this.initData();
-    Storage.remove("user");
+    this.initTags();
+    this.setState(this.initialState, () => {
+      this.initTags();
+      Storage.remove("user");
+    });
     toast.success("User deleted from local storage");
   };
 
@@ -182,18 +170,17 @@ class Register extends React.Component {
     let errorData = this.state.errorData;
     if (name.length < 3) {
       errorData.push([{ name: "Name is too short (min. 4ch)" }]);
-      const state = {
+      this.setState({
         ...this.state,
         errorData
-      };
-      this.updateState(state);
+      });
       isOk = false;
     }
     return isOk;
   };
 
   render() {
-    if (!this.state || !this.state.enableTags) {
+    if (!this.state) {
       return null;
     }
     return (
@@ -299,4 +286,5 @@ class Register extends React.Component {
   }
 } // end class
 
+Register.contextType = UserContext;
 export default withRouter(Register);
