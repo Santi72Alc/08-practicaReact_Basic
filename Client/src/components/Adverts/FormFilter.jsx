@@ -4,9 +4,6 @@ import { withRouter } from "react-router-dom";
 import { UserContext } from "../Context/UserContext";
 import ListOfAdverts from "./ListOfAdverts";
 
-// Api handler
-import api from "../../utils/Api";
-
 // react-bootstrap imports
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
@@ -18,6 +15,7 @@ import Button from "react-bootstrap/Button";
 // Toast use
 import { toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 const toastConf = {
   autoClose: 3000,
   pauseOnHover: true,
@@ -26,74 +24,47 @@ const toastConf = {
 };
 toast.configure(toastConf);
 
-class FormFilter extends React.Component {
-  static contextType = UserContext;
+// const TAGS = ["Lifestile", "mobile", "motor", "work"];
 
+class FormFilter extends React.Component {
   componentDidMount() {
-    const state = {
-      ...this.context,
-      user: {
-        ...this.context.user,
-        isConnected: true
-      },
-      query: "",
-      data: {
-        count: 0,
-        results: []
-      }
-    };
-    this.updateState(state);
-    // this.handle_onExecuteFilter();
+    const state = this.context;
+    console.log("FormFilter DidMount STATE", state);
+    const selectedTag = state.user.tag;
+    this.setState({
+      ...state,
+      selectedTag,
+      query: ""
+    });
   }
 
-  loadItems = async query => {
-    try {
-      const value = await api.getItems(query);
-      const { count, results } = value;
-      const data = {
-        count,
-        results
-      };
-      return data;
-    } catch (error) {
-      console.log("ERROR loading results", error);
-    }
-  };
-
-  updateState = state => {
-    try {
-      this.setState(state);
-    } catch (error) {
-      console.log("Error updating the context");
-    }
-  };
-
-  handle_onExecuteFilter = async () => {
+  handle_onExecuteFilter = () => {
     const filter = document.getElementById("filterInput").value;
     const sale = document.getElementById("saleInput").checked;
     const buy = document.getElementById("buyInput").checked;
-    const selectedTag = document.getElementById("selectInput").value;
-    console.log("Executing filter...");
+    const selectedTag = this.state.selectedTag;
+    console.log("Pulsado EXECUTE ", selectedTag);
 
-    try {
-      // Prepare the filter and conditions
-      const query = this.makeFilter(filter, sale, buy, selectedTag);
-      const data = await this.loadItems(query);
-      const state = {
+    // To prepare the filter and conditions
+    const filterToSend = this.makeFilter(filter, sale, buy, selectedTag);
+    const query = filterToSend;
+    console.log("filterToSend", filterToSend);
+    this.setState(
+      {
         ...this.state,
         selectedTag,
-        query,
-        data
-      };
-      this.updateState(state);
-      this.state.updateContext(this.state);
-    } catch (error) {
-      console.log("Error loading the query", error);
-    }
+        query
+      },
+      () => {
+        console.log("setState handleExecute FormFilter STATE", this.state);
+        this.state.updateContext(this.state);
+      }
+    );
+    return query;
   };
 
   makeFilter = (filter, sale, buy, selectedTag) => {
-    let filterToSend = filter || "";
+    let filterToSend = filter;
     let type = "";
 
     if (!sale || !buy) {
@@ -109,24 +80,29 @@ class FormFilter extends React.Component {
     }
 
     if (selectedTag) {
-      filterToSend += (filterToSend ? "&tag=" : "") + selectedTag;
+      filterToSend += (filterToSend ? "&" : "") + "tag=" + selectedTag;
     }
 
     return filterToSend;
   };
 
   handle_onTagsChange = event => {
-    const state = {
+    let value = Array.from(
+      event.target.selectedOptions,
+      option => option.value
+    );
+    console.log("reading tags from input", value);
+    this.setState({
       ...this.state,
-      selectedTag: event.target.value
-    };
-    this.updateState(state);
+      selectedTag: value
+    });
   };
 
   render() {
     if (!this.state) {
       return null;
     }
+    console.log("render FormFilter STATE", this.state);
     return (
       <>
         <Container>
@@ -135,11 +111,7 @@ class FormFilter extends React.Component {
               Filter options
             </Card.Title>
             <Card.Subtitle className="text-center">
-              {this.state.user.name} {this.state.user.surname}
-              {this.state.user.isConnected}
-              {this.state.user.isConnected === true
-                ? " - connected!!"
-                : "Disconnected!!"}
+              {this.state.user.name} {this.state.user.surname} connected!!
             </Card.Subtitle>
             <hr />
             <Card.Body>
@@ -157,6 +129,7 @@ class FormFilter extends React.Component {
 
                 <Row>
                   <Col>
+                    {/* type of state (buy or sale) */}
                     <Row>
                       <Form.Label className="ml-3">Type of state</Form.Label>
                       <Form.Group className="ml-1" as={Row}>
@@ -194,10 +167,9 @@ class FormFilter extends React.Component {
                         </Form.Label>
                         <Form.Control
                           as="select"
-                          id="selectInput"
                           onChange={this.handle_onTagsChange}
-                          // defaultValue={this.state.enableTags}
-                          value={this.state.selectedTag}
+                          defaultValue={this.state.user.tag}
+                          // value={this.state.enableTags}
                         >
                           {this.context.enableTags.map((value, index) => {
                             return (
@@ -218,10 +190,14 @@ class FormFilter extends React.Component {
             </Card.Body>
           </Card>
         </Container>
-        <ListOfAdverts data={this.state.data} />
+        <ListOfAdverts
+          updateData={this.handle_onExecuteFilter}
+          query={this.state.query}
+        />
       </>
     );
   }
 }
 
+FormFilter.contextType = UserContext;
 export default withRouter(FormFilter);

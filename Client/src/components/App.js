@@ -24,15 +24,16 @@ class App extends React.Component {
       updateContext: this.updateContext,
       enableTags: [],
       userExist: false,
-      selectedTag: "",
-      errorData: []
+      errorData: [],
+      isBusy: false
     }
     // this.updateContext = this.updateContext.bind(this);
   }
 
-  // UpdateContext .. allow to change the provided state!!
-  updateContext = data => this.setState( data, (data) => data);
+  // UpdateContext .. allow change the 'public' state
+  updateContext = data => this.setState( data );
 
+  
   render() {
     return (
       <>

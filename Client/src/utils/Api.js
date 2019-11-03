@@ -26,15 +26,17 @@ const api = {
   }, // end getTags
 
   getItems: async (filter, skip, limit) => {
+    let filterToSend =  filter;
+   
     // ${skip?`&skip=${skip}`:''}${limit?`&limit=${limit}`:''}
     try {
-      const resp = await axios.get(`${urlAdverts}${filter}`);
-      // console.log("getItems filterToSend", `${urlAdverts}${filterToSend}`);
-      // console.log("getIntems api RESP.DATA", resp.data);
+      const resp = await axios.get(`${urlAdverts}${filterToSend}`);
+      console.log("getItems filterToSend", `${urlAdverts}${filterToSend}`);
+      console.log("getIntems api RESP.DATA", resp.data);
       return resp.data;
     } catch (error) {
       console.error("Error getting Adverts", error);
-      return { count: -1, results: [] };
+      return [];
     }
   }, // end getItems
 
