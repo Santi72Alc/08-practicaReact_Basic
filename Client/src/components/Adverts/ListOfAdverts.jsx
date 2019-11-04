@@ -33,7 +33,7 @@ class ListOfAdverts extends React.Component {
     try {
       this.setState(state);
     } catch (error) {
-      console.log("Error updating the context");
+      console.log("Error updating the context", error);
     }
   };
 
@@ -45,7 +45,7 @@ class ListOfAdverts extends React.Component {
     return (
       <>
         <p className="text-center mt-2">
-          Results :({count} {count === 1 ? "advert" : "adverts"})
+          Results: ({count} {count === 1 ? "advert" : "adverts"})
         </p>
         <hr />
         <ListGroup>

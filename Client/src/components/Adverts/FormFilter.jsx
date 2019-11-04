@@ -109,7 +109,7 @@ class FormFilter extends React.Component {
     }
 
     if (selectedTag) {
-      filterToSend += (filterToSend ? "&tag=" : "") + selectedTag;
+      filterToSend += (filterToSend ? "&tag=" : "tag=") + selectedTag;
     }
 
     return filterToSend;
@@ -136,10 +136,7 @@ class FormFilter extends React.Component {
             </Card.Title>
             <Card.Subtitle className="text-center">
               {this.state.user.name} {this.state.user.surname}
-              {this.state.user.isConnected}
-              {this.state.user.isConnected === true
-                ? " - connected!!"
-                : "Disconnected!!"}
+              {this.state.user.name ? " - connected!!" : "Disconnected!!"}
             </Card.Subtitle>
             <hr />
             <Card.Body>
